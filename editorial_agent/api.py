@@ -30,6 +30,27 @@ app.add_middleware(
 def read_root():
     return {"message": "Enterprise API is running. PostgreSQL connected."}
 
+@app.get("/api/debug")
+def debug_db():
+    """Test actual DB connection and table access."""
+    try:
+        from database import engine
+        with engine.connect() as conn:
+            result = conn.execute(__import__('sqlalchemy').text("SELECT 1"))
+            return {"db_ping": "ok", "result": str(result.fetchone())}
+    except Exception as e:
+        return {"db_ping": "failed", "error": str(e)}
+
+@app.get("/api/setup")
+def setup_tables():
+    """Force create all tables."""
+    try:
+        Base.metadata.create_all(bind=engine)
+        return {"status": "Tables created successfully"}
+    except Exception as e:
+        return {"status": "failed", "error": str(e)}
+
+
 # --- DRAFTS ---
 @app.get("/api/drafts")
 def get_drafts(db: Session = Depends(get_db)):
