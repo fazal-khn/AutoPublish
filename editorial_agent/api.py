@@ -9,8 +9,11 @@ from datetime import datetime, timezone
 import ai_generator
 import social_poster
 
-# Create all tables in the database
-Base.metadata.create_all(bind=engine)
+# Create all tables in the database (safely)
+try:
+    Base.metadata.create_all(bind=engine)
+except Exception as e:
+    print(f"Warning: Could not create tables: {e}")
 
 app = FastAPI(title="ProEditor Enterprise API (Later.com Clone)")
 
