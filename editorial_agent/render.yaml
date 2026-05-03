@@ -2,6 +2,7 @@ services:
   - type: web
     name: proeditor-api
     env: python
+    plan: free
     rootDir: editorial_agent
     buildCommand: "pip install -r requirements.txt"
     startCommand: "uvicorn api:app --host 0.0.0.0 --port $PORT"
