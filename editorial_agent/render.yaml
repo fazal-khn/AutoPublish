@@ -1,0 +1,18 @@
+services:
+  - type: web
+    name: proeditor-api
+    env: python
+    rootDir: editorial_agent
+    buildCommand: "pip install -r requirements.txt"
+    startCommand: "uvicorn api:app --host 0.0.0.0 --port $PORT"
+    envVars:
+      - key: DATABASE_URL
+        sync: false
+      - key: GEMINI_API_KEY
+        sync: false
+      - key: AYRSHARE_API_KEY
+        sync: false
+      - key: OPENROUTER_API_KEY
+        sync: false
+      - key: BUFFER_ACCESS_TOKEN
+        sync: false
