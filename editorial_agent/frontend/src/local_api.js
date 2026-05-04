@@ -13,6 +13,15 @@ export const getHealthStatus = async () => {
     }
 };
 
+export const getSocialConnectLink = async () => {
+    try {
+        const response = await fetch(`${API_BASE}/social/connect`);
+        return await response.json();
+    } catch (e) {
+        return { error: 'Failed to reach API' };
+    }
+};
+
 export const getDrafts = async () => {
     try {
         const response = await fetch(`${API_BASE}/drafts`);

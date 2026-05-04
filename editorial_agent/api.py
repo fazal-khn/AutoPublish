@@ -106,6 +106,32 @@ def health_check(db: Session = Depends(get_db)):
     }
 
 
+# --- SOCIAL MEDIA CONNECTION ---
+@app.get("/api/social/connect")
+def get_social_connect_link():
+    """Generate a real Ayrshare Social Link for user login."""
+    import requests
+    import os
+    
+    api_key = os.getenv("AYRSHARE_API_KEY")
+    if not api_key:
+        return {"error": "AYRSHARE_API_KEY not configured"}
+        
+    try:
+        response = requests.post(
+            "https://app.ayrshare.com/api/profiles/generate-link",
+            headers={"Authorization": f"Bearer {api_key}"},
+            json={}
+        )
+        data = response.json()
+        if "url" in data:
+            return {"url": data["url"]}
+        else:
+            return {"error": data.get("status", "Failed to generate link")}
+    except Exception as e:
+        return {"error": str(e)}
+
+
 # --- DRAFTS ---
 @app.get("/api/drafts")
 def get_drafts(db: Session = Depends(get_db)):

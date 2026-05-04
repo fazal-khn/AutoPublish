@@ -2,7 +2,7 @@ import { useState, useEffect, useRef, useCallback } from 'react';
 import { 
   getDrafts, getQueue, getSchedule, getPostedHistory, uploadImage, 
   updateDraftStatus, deleteDraft, triggerDraftGeneration, saveSchedule,
-  engageComment, analyzePerformance, getHealthStatus
+  engageComment, analyzePerformance, getHealthStatus, getSocialConnectLink
 } from './local_api';
 import { 
   Calendar, Image as ImageIcon, MessageCircle, BarChart2, 
@@ -229,7 +229,7 @@ function App() {
     }, 1500);
   };
 
-  const handleConnect = (platform) => {
+  const handleConnect = async (platform) => {
     triggerHaptic();
     const isConnected = connectedAccounts[platform];
     if (isConnected) {
@@ -238,11 +238,15 @@ function App() {
         showToast(`${platform} disconnected.`);
       }
     } else {
-      showToast(`Redirecting to ${platform} login...`);
-      setTimeout(() => {
-        setConnectedAccounts(prev => ({ ...prev, [platform]: true }));
-        showToast(`${platform} connected successfully!`);
-      }, 2000);
+      showToast(`Opening secure ${platform} login...`);
+      const data = await getSocialConnectLink();
+      if (data.url) {
+        // Open the Ayrshare login link in a new window or same window
+        window.open(data.url, '_blank');
+        showToast("Complete login in the new window");
+      } else {
+        alert("Error: " + (data.error || "Could not generate login link"));
+      }
     }
   };
 
