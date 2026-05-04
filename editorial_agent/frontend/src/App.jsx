@@ -548,17 +548,141 @@ function App() {
             </div>
           )}
 
-          {activeTab === 'inbox' && (
-            <div style={{maxWidth: '1000px'}}>
-              <h2 className="section-title">Command Center (Smart Inbox)</h2>
-              <div className="card" style={{padding: '4rem', textAlign: 'center', color: 'var(--text-secondary)'}}>Inbox content is hidden in this simplified view.</div>
+          {activeTab === 'media' && (
+            <div style={{maxWidth:'1000px'}}>
+              <h2 className="section-title">Media Library</h2>
+              <div style={{display:'flex',gap:'1rem',marginBottom:'1rem',flexWrap:'wrap'}}>
+                <button className="btn btn-primary" onClick={()=>{fileInputRef.current?.click();}}><Plus size={16}/> Upload</button>
+                <button className="btn btn-outline" onClick={()=>{triggerHaptic();writeManually(null);}}><PenTool size={16}/> AI Generate</button>
+              </div>
+              {queue.length===0?(
+                <div className="card" style={{padding:'4rem',textAlign:'center',color:'var(--text-secondary)'}}>
+                  <ImageIcon size={48} style={{marginBottom:'1rem',opacity:0.3}}/><br/>No media yet. Upload images or videos to get started.
+                </div>
+              ):(
+                <div style={{display:'grid',gridTemplateColumns:'repeat(auto-fill,minmax(180px,1fr))',gap:'1rem'}}>
+                  {queue.map((img,i)=>(
+                    <div key={i} className="card" style={{padding:'0.75rem',cursor:'pointer'}} onClick={()=>{triggerHaptic();writeManually(img);}}>
+                      <div style={{height:'120px',background:'var(--bg-base)',borderRadius:'8px',display:'flex',alignItems:'center',justifyContent:'center',marginBottom:'0.5rem'}}><ImageIcon size={32} color="var(--text-secondary)"/></div>
+                      <div style={{fontSize:'0.8rem',overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{img}</div>
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
           )}
-          
+
+          {activeTab === 'inbox' && (
+            <div style={{maxWidth:'1000px'}}>
+              <h2 className="section-title">Smart Inbox</h2>
+              <div style={{display:'flex',gap:'0.5rem',marginBottom:'1rem'}}>
+                {['All','Comments','DMs','Mentions'].map(f=>(
+                  <button key={f} className="pill-tab active" style={{cursor:'pointer'}}>{f}</button>
+                ))}
+              </div>
+              <div className="card" style={{padding:'1.5rem'}}>
+                <div style={{display:'flex',alignItems:'center',gap:'1rem',paddingBottom:'1rem',borderBottom:'1px solid var(--border)'}}>
+                  <div style={{width:'40px',height:'40px',borderRadius:'50%',background:'var(--accent)',display:'flex',alignItems:'center',justifyContent:'center',color:'#fff',fontWeight:700}}>J</div>
+                  <div style={{flex:1}}><div style={{fontWeight:600}}>@johndoe</div><div style={{fontSize:'0.85rem',color:'var(--text-secondary)'}}>Love this content! 🔥 Keep it coming</div></div>
+                  <div style={{fontSize:'0.75rem',color:'var(--text-secondary)'}}>2h ago</div>
+                </div>
+                <div style={{display:'flex',alignItems:'center',gap:'1rem',paddingTop:'1rem'}}>
+                  <div style={{width:'40px',height:'40px',borderRadius:'50%',background:'#f59e0b',display:'flex',alignItems:'center',justifyContent:'center',color:'#fff',fontWeight:700}}>S</div>
+                  <div style={{flex:1}}><div style={{fontWeight:600}}>@sarah_designs</div><div style={{fontSize:'0.85rem',color:'var(--text-secondary)'}}>Can you share more about your workflow?</div></div>
+                  <div style={{fontSize:'0.75rem',color:'var(--text-secondary)'}}>5h ago</div>
+                </div>
+              </div>
+            </div>
+          )}
+
           {activeTab === 'listening' && (
-            <div style={{maxWidth: '1000px'}}>
-              <h2 className="section-title">Brand Sentiment</h2>
-              <div className="card" style={{padding: '4rem', textAlign: 'center', color: 'var(--text-secondary)'}}>Listening data loaded.</div>
+            <div style={{maxWidth:'1000px'}}>
+              <h2 className="section-title">Brand Listening</h2>
+              <div style={{display:'grid',gridTemplateColumns:'repeat(auto-fill,minmax(280px,1fr))',gap:'1rem'}}>
+                <div className="card" style={{padding:'1.5rem'}}><div style={{fontSize:'0.8rem',color:'var(--text-secondary)',textTransform:'uppercase',marginBottom:'0.5rem'}}>Sentiment</div><div style={{fontSize:'2rem',fontWeight:700,color:'var(--success)'}}>82% Positive</div></div>
+                <div className="card" style={{padding:'1.5rem'}}><div style={{fontSize:'0.8rem',color:'var(--text-secondary)',textTransform:'uppercase',marginBottom:'0.5rem'}}>Mentions</div><div style={{fontSize:'2rem',fontWeight:700}}>147 <span style={{fontSize:'0.9rem',color:'var(--success)'}}>↑ 12%</span></div></div>
+                <div className="card" style={{padding:'1.5rem'}}><div style={{fontSize:'0.8rem',color:'var(--text-secondary)',textTransform:'uppercase',marginBottom:'0.5rem'}}>Top Keyword</div><div style={{fontSize:'2rem',fontWeight:700}}>#AutoPublish</div></div>
+              </div>
+            </div>
+          )}
+
+          {activeTab === 'analytics' && (
+            <div style={{maxWidth:'1000px'}}>
+              <h2 className="section-title">Analytics</h2>
+              <div style={{display:'grid',gridTemplateColumns:'repeat(auto-fill,minmax(200px,1fr))',gap:'1rem',marginBottom:'1.5rem'}}>
+                <div className="card" style={{padding:'1.5rem'}}><div style={{fontSize:'0.8rem',color:'var(--text-secondary)',textTransform:'uppercase',marginBottom:'0.5rem'}}>Total Posts</div><div style={{fontSize:'2.2rem',fontWeight:700}}>{history.length}</div></div>
+                <div className="card" style={{padding:'1.5rem'}}><div style={{fontSize:'0.8rem',color:'var(--text-secondary)',textTransform:'uppercase',marginBottom:'0.5rem'}}>Drafts</div><div style={{fontSize:'2.2rem',fontWeight:700}}>{drafts.length}</div></div>
+                <div className="card" style={{padding:'1.5rem'}}><div style={{fontSize:'0.8rem',color:'var(--text-secondary)',textTransform:'uppercase',marginBottom:'0.5rem'}}>Scheduled</div><div style={{fontSize:'2.2rem',fontWeight:700}}>{schedule.length}</div></div>
+                <div className="card" style={{padding:'1.5rem'}}><div style={{fontSize:'0.8rem',color:'var(--text-secondary)',textTransform:'uppercase',marginBottom:'0.5rem'}}>Engagement</div><div style={{fontSize:'2.2rem',fontWeight:700,color:'var(--success)'}}>4.2%</div></div>
+              </div>
+              <div className="card" style={{padding:'2rem',textAlign:'center',color:'var(--text-secondary)'}}><BarChart2 size={48} style={{marginBottom:'1rem',opacity:0.3}}/><br/>Detailed charts available after publishing 5+ posts.</div>
+            </div>
+          )}
+
+          {activeTab === 'clients' && (
+            <div style={{maxWidth:'1000px'}}>
+              <h2 className="section-title">Client Approvals</h2>
+              <div className="card" style={{padding:'1.5rem',marginBottom:'1rem'}}>
+                <div style={{display:'flex',justifyContent:'space-between',alignItems:'center'}}>
+                  <div><div style={{fontWeight:700}}>Acme Corp</div><div style={{fontSize:'0.85rem',color:'var(--text-secondary)'}}>{drafts.filter(d=>approvedSet.has(d.id)).length} approved, {drafts.filter(d=>!approvedSet.has(d.id)).length} pending</div></div>
+                  <button className="btn btn-outline" onClick={()=>{triggerHaptic();const link=`${window.location.origin}/approve`;navigator.clipboard.writeText(link);showToast('Approval link copied!');}}><LinkIcon size={14}/> Copy Link</button>
+                </div>
+              </div>
+              <button className="btn btn-primary" onClick={()=>{triggerHaptic();showToast('Invite sent!');}}><Plus size={16}/> Add Client</button>
+            </div>
+          )}
+
+          {activeTab === 'settings' && (
+            <div style={{maxWidth:'800px'}}>
+              <h2 className="section-title">Settings</h2>
+
+              <div className="card" style={{padding:'1.5rem',marginBottom:'1rem'}}>
+                <h3 style={{fontSize:'1rem',fontWeight:700,marginBottom:'1rem',display:'flex',alignItems:'center',gap:'0.5rem'}}><Globe size={18}/> Connected Accounts</h3>
+                {[
+                  {name:'Instagram',color:'#E1306C',icon:'📸',connected:true},
+                  {name:'X (Twitter)',color:'#1DA1F2',icon:'𝕏',connected:true},
+                  {name:'LinkedIn',color:'#0077B5',icon:'in',connected:false},
+                  {name:'Pinterest',color:'#E60023',icon:'📌',connected:false},
+                  {name:'TikTok',color:'#000000',icon:'🎵',connected:false},
+                  {name:'Threads',color:'#000000',icon:'🧵',connected:false},
+                ].map((acc,i)=>(
+                  <div key={i} style={{display:'flex',alignItems:'center',justifyContent:'space-between',padding:'0.75rem 0',borderBottom:i<5?'1px solid var(--border)':'none'}}>
+                    <div style={{display:'flex',alignItems:'center',gap:'0.75rem'}}>
+                      <div style={{width:'36px',height:'36px',borderRadius:'10px',background:acc.color,display:'flex',alignItems:'center',justifyContent:'center',color:'#fff',fontSize:'1rem',fontWeight:700}}>{acc.icon}</div>
+                      <div><div style={{fontWeight:600}}>{acc.name}</div><div style={{fontSize:'0.8rem',color:acc.connected?'var(--success)':'var(--text-secondary)'}}>{acc.connected?'Connected':'Not connected'}</div></div>
+                    </div>
+                    <button className={`btn ${acc.connected?'btn-outline':'btn-primary'}`} style={{padding:'0.4rem 1rem',fontSize:'0.85rem'}} onClick={()=>{triggerHaptic();showToast(acc.connected?`${acc.name} disconnected`:`Redirecting to ${acc.name} login...`);}}>{acc.connected?'Disconnect':'Connect'}</button>
+                  </div>
+                ))}
+              </div>
+
+              <div className="card" style={{padding:'1.5rem',marginBottom:'1rem'}}>
+                <h3 style={{fontSize:'1rem',fontWeight:700,marginBottom:'1rem',display:'flex',alignItems:'center',gap:'0.5rem'}}><Shield size={18}/> API Keys</h3>
+                {['GEMINI_API_KEY','AYRSHARE_API_KEY','OPENROUTER_API_KEY','BUFFER_ACCESS_TOKEN'].map((k,i)=>(
+                  <div key={i} style={{display:'flex',alignItems:'center',justifyContent:'space-between',padding:'0.5rem 0',borderBottom:i<3?'1px solid var(--border)':'none'}}>
+                    <span style={{fontFamily:'monospace',fontSize:'0.85rem'}}>{k}</span>
+                    <span style={{fontSize:'0.8rem',color:'var(--success)'}}>••••••••</span>
+                  </div>
+                ))}
+              </div>
+
+              <div className="card" style={{padding:'1.5rem',marginBottom:'1rem'}}>
+                <h3 style={{fontSize:'1rem',fontWeight:700,marginBottom:'1rem',display:'flex',alignItems:'center',gap:'0.5rem'}}><User size={18}/> Profile</h3>
+                <div style={{display:'flex',flexDirection:'column',gap:'0.75rem'}}>
+                  <div><label style={{fontSize:'0.8rem',color:'var(--text-secondary)',display:'block',marginBottom:'4px'}}>Display Name</label><input className="form-input" defaultValue="AutoPublish User" style={{width:'100%'}}/></div>
+                  <div><label style={{fontSize:'0.8rem',color:'var(--text-secondary)',display:'block',marginBottom:'4px'}}>Email</label><input className="form-input" defaultValue="user@autopublish.app" style={{width:'100%'}}/></div>
+                  <div><label style={{fontSize:'0.8rem',color:'var(--text-secondary)',display:'block',marginBottom:'4px'}}>Timezone</label><select className="form-input" style={{width:'100%'}}><option>UTC</option><option>Asia/Karachi (PKT)</option><option>America/New_York (EST)</option><option>Europe/London (GMT)</option></select></div>
+                  <button className="btn btn-primary" style={{alignSelf:'flex-start',marginTop:'0.5rem'}} onClick={()=>{triggerHaptic();showToast('Settings saved!');}}>Save Changes</button>
+                </div>
+              </div>
+
+              <div className="card" style={{padding:'1.5rem'}}>
+                <h3 style={{fontSize:'1rem',fontWeight:700,marginBottom:'1rem',display:'flex',alignItems:'center',gap:'0.5rem'}}><Database size={18}/> System</h3>
+                <div style={{display:'flex',gap:'0.75rem',flexWrap:'wrap'}}>
+                  <button className="btn btn-outline" onClick={()=>{triggerHaptic();fetchData();fetchHealth();showToast('Data refreshed!');}}><RefreshCcw size={14}/> Refresh All Data</button>
+                  <button className="btn btn-outline" style={{color:'var(--danger)',borderColor:'var(--danger)'}} onClick={()=>{triggerHaptic();showToast('Cache cleared');}}><Trash2 size={14}/> Clear Cache</button>
+                </div>
+              </div>
             </div>
           )}
 
