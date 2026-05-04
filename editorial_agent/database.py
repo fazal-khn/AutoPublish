@@ -6,17 +6,35 @@ from dotenv import load_dotenv
 load_dotenv()
 
 # Strip surrounding quotes that may come from .env or Render dashboard
-DATABASE_URL = os.getenv("DATABASE_URL", "postgresql://postgres:postgres@localhost/editorial_agent")
-DATABASE_URL = DATABASE_URL.strip().strip('"').strip("'")
+DATABASE_URL = os.getenv("DATABASE_URL", "").strip().strip('"').strip("'")
 
-# Supabase requires SSL — add connect_args
-engine = create_engine(
-    DATABASE_URL,
-    connect_args={"sslmode": "require"},
-    pool_pre_ping=True,  # auto-reconnect if connection drops
-)
+# Try PostgreSQL first, fall back to SQLite if not configured or unreachable
+if DATABASE_URL and DATABASE_URL.startswith("postgresql"):
+    try:
+        # Supabase requires SSL and IPv4 via pooler
+        engine = create_engine(
+            DATABASE_URL,
+            connect_args={"sslmode": "require"},
+            pool_pre_ping=True,
+        )
+        # Test the connection immediately
+        with engine.connect() as conn:
+            pass
+        print("✅ Connected to PostgreSQL (Supabase)")
+    except Exception as e:
+        print(f"⚠️  PostgreSQL failed ({e}), falling back to SQLite")
+        engine = create_engine(
+            "sqlite:////tmp/editorial_agent.db",
+            connect_args={"check_same_thread": False}
+        )
+else:
+    print("ℹ️  No PostgreSQL URL found, using SQLite")
+    engine = create_engine(
+        "sqlite:////tmp/editorial_agent.db",
+        connect_args={"check_same_thread": False}
+    )
+
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
-
 Base = declarative_base()
 
 def get_db():
@@ -25,3 +43,4 @@ def get_db():
         yield db
     finally:
         db.close()
+
