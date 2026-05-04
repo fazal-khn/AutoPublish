@@ -2,7 +2,8 @@ import { useState, useEffect, useRef, useCallback } from 'react';
 import { 
   getDrafts, getQueue, getSchedule, getPostedHistory, uploadImage, 
   updateDraftStatus, deleteDraft, triggerDraftGeneration, saveSchedule,
-  engageComment, analyzePerformance, getHealthStatus, getSocialConnectLink
+  engageComment, analyzePerformance, getHealthStatus, getSocialConnectLink,
+  getSocialAccounts
 } from './local_api';
 import { 
   Calendar, Image as ImageIcon, MessageCircle, BarChart2, 
@@ -62,8 +63,8 @@ function App() {
 
   // Social Account Connections State
   const [connectedAccounts, setConnectedAccounts] = useState({
-    instagram: true,
-    x: true,
+    instagram: false,
+    x: false,
     linkedin: false,
     pinterest: false,
     tiktok: false,
@@ -87,12 +88,28 @@ function App() {
     }
   }, []);
 
+  const fetchSocialStatus = async () => {
+    const data = await getSocialAccounts();
+    if (data && !data.error) {
+      setConnectedAccounts({
+        instagram: !!data.instagram,
+        x: !!(data.twitter || data.x),
+        linkedin: !!data.linkedin,
+        pinterest: !!data.pinterest,
+        tiktok: !!data.tiktok,
+        threads: !!data.threads
+      });
+    }
+  };
+
   useEffect(() => {
     fetchData();
     fetchHealth();
+    fetchSocialStatus();
     
-    // Poll health every 30 seconds
+    // Poll every 30-60 seconds
     const healthInterval = setInterval(fetchHealth, 30000);
+    const socialInterval = setInterval(fetchSocialStatus, 60000);
     
     // Command Palette Listener
     const handleKeyDown = (e) => {
@@ -106,6 +123,7 @@ function App() {
     return () => {
       window.removeEventListener('keydown', handleKeyDown);
       clearInterval(healthInterval);
+      clearInterval(socialInterval);
     };
   }, [fetchHealth]);
 

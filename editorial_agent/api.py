@@ -169,6 +169,26 @@ def get_analytics_summary(db: Session = Depends(get_db)):
 
 
 # --- SOCIAL MEDIA CONNECTION ---
+@app.get("/api/social/accounts")
+def get_social_accounts():
+    """Fetch real connection status from Ayrshare."""
+    import requests
+    import os
+    
+    api_key = os.getenv("AYRSHARE_API_KEY")
+    if not api_key:
+        return {"error": "AYRSHARE_API_KEY not configured"}
+        
+    try:
+        # Get profile status from Ayrshare
+        response = requests.get(
+            "https://app.ayrshare.com/api/profiles/accounts",
+            headers={"Authorization": f"Bearer {api_key}"}
+        )
+        return response.json()
+    except Exception as e:
+        return {"error": str(e)}
+
 @app.get("/api/social/connect")
 def get_social_connect_link():
     """Generate a real Ayrshare Social Link for user login."""
