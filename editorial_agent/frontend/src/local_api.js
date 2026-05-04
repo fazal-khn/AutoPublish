@@ -1,5 +1,18 @@
 const API_BASE = 'https://proeditor-api.onrender.com/api';
 
+export const getHealthStatus = async () => {
+    try {
+        const response = await fetch(`${API_BASE}/health`);
+        return await response.json();
+    } catch (e) {
+        return {
+            overall: 'error',
+            issues: [{ type: 'error', title: 'API Unreachable', message: 'Cannot connect to backend. It may be waking up (free tier).', time: new Date().toISOString() }],
+            services: {}
+        };
+    }
+};
+
 export const getDrafts = async () => {
     try {
         const response = await fetch(`${API_BASE}/drafts`);

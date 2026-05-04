@@ -50,6 +50,61 @@ def setup_tables():
     except Exception as e:
         return {"status": "failed", "error": str(e)}
 
+@app.get("/api/health")
+def health_check(db: Session = Depends(get_db)):
+    """Live health check — used by frontend notification system."""
+    from datetime import datetime, timezone
+    issues = []
+    services = {}
+
+    # 1. Database check
+    try:
+        db.execute(__import__("sqlalchemy").text("SELECT 1"))
+        services["database"] = {"status": "ok", "label": "Database"}
+    except Exception as e:
+        services["database"] = {"status": "error", "label": "Database", "message": str(e)[:120]}
+        issues.append({"type": "error", "title": "Database Error", "message": str(e)[:120], "time": datetime.now(timezone.utc).isoformat()})
+
+    # 2. Draft count
+    try:
+        count = db.query(models.Draft).count()
+        services["drafts"] = {"status": "ok", "label": f"Drafts ({count} total)"}
+    except Exception as e:
+        services["drafts"] = {"status": "error", "label": "Drafts", "message": str(e)[:120]}
+        issues.append({"type": "warning", "title": "Drafts Table Error", "message": str(e)[:120], "time": datetime.now(timezone.utc).isoformat()})
+
+    # 3. Scheduled posts check
+    try:
+        scheduled = db.query(models.ScheduledPost).filter(models.ScheduledPost.status == "scheduled").count()
+        failed = db.query(models.ScheduledPost).filter(models.ScheduledPost.status == "failed").count()
+        services["scheduler"] = {"status": "ok" if failed == 0 else "warning", "label": f"Scheduler ({scheduled} pending, {failed} failed)"}
+        if failed > 0:
+            issues.append({"type": "warning", "title": f"{failed} Post(s) Failed to Publish", "message": "Check your Ayrshare API key and social accounts.", "time": datetime.now(timezone.utc).isoformat()})
+    except Exception as e:
+        services["scheduler"] = {"status": "error", "label": "Scheduler", "message": str(e)[:120]}
+
+    # 4. API Keys check
+    import os
+    missing_keys = []
+    for key in ["GEMINI_API_KEY", "AYRSHARE_API_KEY", "OPENROUTER_API_KEY"]:
+        if not os.getenv(key) or os.getenv(key) == "your_key_here":
+            missing_keys.append(key)
+    if missing_keys:
+        services["api_keys"] = {"status": "warning", "label": f"Missing API Keys: {', '.join(missing_keys)}"}
+        issues.append({"type": "warning", "title": "Missing API Keys", "message": f"{', '.join(missing_keys)} not configured.", "time": datetime.now(timezone.utc).isoformat()})
+    else:
+        services["api_keys"] = {"status": "ok", "label": "All API Keys Set"}
+
+    overall = "error" if any(s["status"] == "error" for s in services.values()) else \
+              "warning" if any(s["status"] == "warning" for s in services.values()) else "ok"
+
+    return {
+        "overall": overall,
+        "services": services,
+        "issues": issues,
+        "checked_at": datetime.now(timezone.utc).isoformat()
+    }
+
 
 # --- DRAFTS ---
 @app.get("/api/drafts")

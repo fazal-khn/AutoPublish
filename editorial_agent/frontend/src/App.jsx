@@ -1,8 +1,8 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { 
   getDrafts, getQueue, getSchedule, getPostedHistory, uploadImage, 
   updateDraftStatus, deleteDraft, triggerDraftGeneration, saveSchedule,
-  engageComment, analyzePerformance
+  engageComment, analyzePerformance, getHealthStatus
 } from './local_api';
 import { 
   Calendar, Image as ImageIcon, MessageCircle, BarChart2, 
@@ -60,8 +60,29 @@ function App() {
   const [clientLink, setClientLink] = useState('');
   const [evergreenEnabled, setEvergreenEnabled] = useState(false);
 
+  // Live health monitoring
+  const [healthStatus, setHealthStatus] = useState(null);
+  const [notifications, setNotifications] = useState([]);
+  const [unreadCount, setUnreadCount] = useState(0);
+
+  const fetchHealth = useCallback(async () => {
+    const health = await getHealthStatus();
+    setHealthStatus(health);
+    if (health.issues && health.issues.length > 0) {
+      setNotifications(health.issues);
+      setUnreadCount(health.issues.length);
+    } else {
+      setNotifications([{ type: 'success', title: 'All Systems Operational', message: 'Database, scheduler, and API keys are all working.', time: new Date().toISOString() }]);
+      setUnreadCount(0);
+    }
+  }, []);
+
   useEffect(() => {
     fetchData();
+    fetchHealth();
+    
+    // Poll health every 30 seconds
+    const healthInterval = setInterval(fetchHealth, 30000);
     
     // Command Palette Listener
     const handleKeyDown = (e) => {
@@ -72,8 +93,11 @@ function App() {
       if (e.key === 'Escape') setCmdPaletteOpen(false);
     };
     window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
-  }, []);
+    return () => {
+      window.removeEventListener('keydown', handleKeyDown);
+      clearInterval(healthInterval);
+    };
+  }, [fetchHealth]);
 
   useEffect(() => {
     if (isDarkMode) document.body.classList.add('dark-mode');
@@ -341,16 +365,48 @@ function App() {
                <Search size={16}/> <span style={{fontSize: '0.75rem', marginLeft: '0.5rem', fontFamily: 'monospace', background: 'var(--bg-base)', padding: '0.2rem 0.4rem', borderRadius: '4px'}}>⌘K</span>
              </button>
 
-             {/* Notifications */}
+             {/* Live Notifications */}
              <div style={{position: 'relative'}}>
-               <button aria-label="Notifications" className="btn-icon" onClick={() => setNotificationsOpen(!notificationsOpen)}>
+               <button aria-label="Notifications" className="btn-icon" onClick={() => { setNotificationsOpen(!notificationsOpen); setUnreadCount(0); }}>
                  <Bell size={20}/>
-                 <div style={{position: 'absolute', top: '2px', right: '4px', width: '8px', height: '8px', background: 'var(--danger)', borderRadius: '50%'}} />
+                 {unreadCount > 0 && (
+                   <div style={{
+                     position: 'absolute', top: '2px', right: '4px',
+                     minWidth: '16px', height: '16px', padding: '0 3px',
+                     background: notifications.some(n => n.type === 'error') ? 'var(--danger)' : 'var(--warning, #f59e0b)',
+                     borderRadius: '8px', fontSize: '10px', fontWeight: 700,
+                     color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center',
+                     animation: 'pulse 1.5s infinite'
+                   }}>{unreadCount}</div>
+                 )}
+                 {unreadCount === 0 && healthStatus?.overall === 'ok' && (
+                   <div style={{position: 'absolute', top: '2px', right: '4px', width: '8px', height: '8px', background: 'var(--success)', borderRadius: '50%'}} />
+                 )}
                </button>
                <div className={`notif-dropdown ${notificationsOpen ? 'open' : ''}`}>
-                 <div className="notif-header">Notifications</div>
-                 <div className="notif-item"><AlertTriangle size={16} color="var(--danger)" /> <span>Post failed to publish on X. Review API limits.</span></div>
-                 <div className="notif-item"><CheckCircle2 size={16} color="var(--success)" /> <span>Client 'Acme Corp' approved 4 drafts.</span></div>
+                 <div className="notif-header" style={{display:'flex', justifyContent:'space-between', alignItems:'center'}}>
+                   <span>System Status</span>
+                   <span style={{fontSize:'0.7rem', color: healthStatus?.overall === 'ok' ? 'var(--success)' : healthStatus?.overall === 'warning' ? '#f59e0b' : 'var(--danger)', fontWeight:700, textTransform:'uppercase'}}>
+                     {healthStatus ? healthStatus.overall : 'checking...'}
+                   </span>
+                 </div>
+                 {notifications.length === 0 ? (
+                   <div className="notif-item"><Loader2 size={16} style={{animation:'spin 1s linear infinite'}}/> <span>Checking systems...</span></div>
+                 ) : notifications.map((n, i) => (
+                   <div key={i} className="notif-item">
+                     {n.type === 'error' ? <AlertTriangle size={16} color="var(--danger)" /> :
+                      n.type === 'warning' ? <AlertTriangle size={16} color="#f59e0b" /> :
+                      <CheckCircle2 size={16} color="var(--success)" />}
+                     <div style={{flex:1}}>
+                       <div style={{fontWeight:600, fontSize:'0.82rem'}}>{n.title}</div>
+                       <div style={{fontSize:'0.75rem', color:'var(--text-muted)', marginTop:'2px'}}>{n.message}</div>
+                       <div style={{fontSize:'0.7rem', color:'var(--text-muted)', marginTop:'2px'}}>{n.time ? new Date(n.time).toLocaleTimeString() : ''}</div>
+                     </div>
+                   </div>
+                 ))}
+                 <div style={{padding:'0.5rem 1rem', borderTop:'1px solid var(--border)', fontSize:'0.7rem', color:'var(--text-muted)', textAlign:'center'}}>
+                   Auto-refreshes every 30s
+                 </div>
                </div>
              </div>
 
