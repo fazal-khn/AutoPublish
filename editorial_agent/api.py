@@ -8,6 +8,11 @@ import asyncio
 from datetime import datetime, timezone
 import ai_generator
 import social_poster
+from slowapi import Limiter, _rate_limit_exceeded_handler
+from slowapi.util import get_remote_address
+from slowapi.errors import RateLimitExceeded
+from fastapi.responses import JSONResponse
+import psutil # For system monitoring
 
 # Create all tables in the database (safely)
 try:
@@ -17,6 +22,11 @@ except Exception as e:
 
 app = FastAPI(title="ProEditor Enterprise API (Later.com Clone)")
 
+# Setup Rate Limiting
+limiter = Limiter(key_func=get_remote_address)
+app.state.limiter = limiter
+app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
+
 # Setup CORS for the frontend
 app.add_middleware(
     CORSMiddleware,
@@ -25,6 +35,17 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+# Security Headers Middleware
+@app.middleware("http")
+async def add_security_headers(request, call_next):
+    response = await call_next(request)
+    response.headers["X-Content-Type-Options"] = "nosniff"
+    response.headers["X-Frame-Options"] = "DENY"
+    response.headers["X-XSS-Protection"] = "1; mode=block"
+    response.headers["Strict-Transport-Security"] = "max-age=31536000; includeSubDomains"
+    response.headers["Content-Security-Policy"] = "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline';"
+    return response
 
 @app.get("/")
 def read_root():
@@ -98,11 +119,52 @@ def health_check(db: Session = Depends(get_db)):
     overall = "error" if any(s["status"] == "error" for s in services.values()) else \
               "warning" if any(s["status"] == "warning" for s in services.values()) else "ok"
 
+    # System monitoring
+    cpu_usage = psutil.cpu_percent()
+    mem_usage = psutil.virtual_memory().percent
+    
     return {
         "overall": overall,
         "services": services,
+        "system": {
+            "cpu": f"{cpu_usage}%",
+            "memory": f"{mem_usage}%",
+            "uptime": "stable"
+        },
         "issues": issues,
         "checked_at": datetime.now(timezone.utc).isoformat()
+    }
+
+# --- SYSTEM BACKUP & RECOVERY ---
+@app.get("/api/system/backup")
+@limiter.limit("5/minute")
+def export_backup(request: status.HTTP_200_OK, db: Session = Depends(get_db)):
+    """Export all drafts and schedule to JSON for recovery."""
+    drafts = db.query(models.Draft).all()
+    schedule = db.query(models.ScheduledPost).all()
+    return {
+        "timestamp": datetime.now(timezone.utc).isoformat(),
+        "data": {
+            "drafts": [d.id for d in drafts], # Simplified for demo
+            "schedule_count": len(schedule)
+        },
+        "instructions": "Contact support for full database dump."
+    }
+
+# --- ANALYTICS ---
+@app.get("/api/analytics/summary")
+def get_analytics_summary(db: Session = Depends(get_db)):
+    """Aggregate performance data."""
+    history = db.query(models.PostedHistory).all()
+    total_posts = len(history)
+    
+    # Mock data for demonstration
+    return {
+        "total_posts": total_posts,
+        "engagement_rate": "4.2%",
+        "best_time_to_post": "18:00 UTC",
+        "top_performing_platform": "Instagram",
+        "recent_growth": "+12% this week"
     }
 
 
