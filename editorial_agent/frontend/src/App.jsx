@@ -241,9 +241,9 @@ function App() {
       showToast(`Opening secure ${platform} login...`);
       const data = await getSocialConnectLink();
       if (data.url) {
-        // Open the Ayrshare login link in a new window or same window
-        window.open(data.url, '_blank');
-        showToast("Complete login in the new window");
+        if (data.warning) showToast(data.warning);
+        // Use location.href instead of window.open to avoid popup blockers
+        window.location.href = data.url;
       } else {
         alert("Error: " + (data.error || "Could not generate login link"));
       }

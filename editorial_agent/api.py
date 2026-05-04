@@ -186,10 +186,23 @@ def get_social_connect_link():
             json={}
         )
         data = response.json()
+        
         if "url" in data:
             return {"url": data["url"]}
-        else:
-            return {"error": data.get("status", "Failed to generate link")}
+        
+        # Handle plan limitations (e.g. Business Plan required)
+        if data.get("status") == "error":
+            message = data.get("message", "")
+            if "Business Plan" in message:
+                # Fallback: Redirect to the standard Ayrshare Social Accounts page
+                # This works for personal/premium plans if they are logged into Ayrshare
+                return {
+                    "url": "https://app.ayrshare.com/social-accounts",
+                    "warning": "Ayrshare Business Plan required for embedded login. Redirecting to dashboard."
+                }
+            return {"error": message}
+            
+        return {"error": "Failed to generate link"}
     except Exception as e:
         return {"error": str(e)}
 
