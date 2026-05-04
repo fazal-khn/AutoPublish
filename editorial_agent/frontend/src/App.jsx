@@ -242,10 +242,13 @@ function App() {
       const data = await getSocialConnectLink();
       if (data.url) {
         if (data.warning) showToast(data.warning);
-        // Use location.href instead of window.open to avoid popup blockers
-        window.location.href = data.url;
+        // Force redirect to ensure no blocks
+        setTimeout(() => {
+          window.location.href = data.url;
+        }, 800);
       } else {
-        alert("Error: " + (data.error || "Could not generate login link"));
+        showToast("Error: Link generation failed. Trying manual link...");
+        window.location.href = "https://app.ayrshare.com/social-accounts";
       }
     }
   };
