@@ -60,6 +60,16 @@ function App() {
   const [clientLink, setClientLink] = useState('');
   const [evergreenEnabled, setEvergreenEnabled] = useState(false);
 
+  // Social Account Connections State
+  const [connectedAccounts, setConnectedAccounts] = useState({
+    instagram: true,
+    x: true,
+    linkedin: false,
+    pinterest: false,
+    tiktok: false,
+    threads: false
+  });
+
   // Live health monitoring
   const [healthStatus, setHealthStatus] = useState(null);
   const [notifications, setNotifications] = useState([]);
@@ -205,6 +215,59 @@ function App() {
       alert('Failed to create manual draft');
     } finally {
       setIsGenerating(false);
+    }
+  };
+
+  const handleRewrite = async (id, platform) => {
+    triggerHaptic();
+    showToast(`AI is rewriting your ${platform} caption...`);
+    setTimeout(() => {
+      const currentText = editedDrafts[id]?.[platform] || "";
+      const rewritten = currentText + " (Optimized by AI ✨)";
+      handleDraftChange(id, platform, rewritten);
+      showToast("Caption rewritten!");
+    }, 1500);
+  };
+
+  const handleConnect = (platform) => {
+    triggerHaptic();
+    const isConnected = connectedAccounts[platform];
+    if (isConnected) {
+      if (confirm(`Disconnect ${platform}?`)) {
+        setConnectedAccounts(prev => ({ ...prev, [platform]: false }));
+        showToast(`${platform} disconnected.`);
+      }
+    } else {
+      showToast(`Redirecting to ${platform} login...`);
+      setTimeout(() => {
+        setConnectedAccounts(prev => ({ ...prev, [platform]: true }));
+        showToast(`${platform} connected successfully!`);
+      }, 2000);
+    }
+  };
+
+  const handleScheduleAll = async () => {
+    triggerHaptic();
+    if (approvedSet.size === 0) return;
+    
+    setIsScheduling(true);
+    try {
+      const approvedDrafts = drafts.filter(d => approvedSet.has(d.id));
+      const newPosts = approvedDrafts.map(d => ({
+        image_name: d.image_name,
+        captions: editedDrafts[d.id],
+        platforms: draftPlatforms[d.id],
+        post_time: new Date(Date.now() + 3600000).toISOString()
+      }));
+      
+      await saveSchedule(newPosts);
+      showToast(`${approvedSet.size} posts scheduled successfully!`);
+      await fetchData();
+      setApprovedSet(new Set());
+    } catch (e) {
+      alert("Failed to schedule posts: " + e.message);
+    } finally {
+      setIsScheduling(false);
     }
   };
 
@@ -415,8 +478,8 @@ function App() {
                {isDarkMode ? <Sun size={20}/> : <Moon size={20}/>}
              </button>
 
-             <button className="btn btn-primary" onClick={() => {triggerHaptic(); showToast("Posts scheduled!");}} disabled={approvedSet.size === 0}>
-                Schedule ({approvedSet.size})
+             <button className="btn btn-primary" onClick={handleScheduleAll} disabled={approvedSet.size === 0 || isScheduling}>
+                {isScheduling ? <Loader2 size={16} className="spin" /> : `Schedule (${approvedSet.size})`}
              </button>
           </div>
         </header>
@@ -475,7 +538,7 @@ function App() {
                                onChange={(e) => handleDraftChange(draft.id, activeCapTab, e.target.value)}
                                placeholder={`Write ${activeCapTab} caption...`}
                              />
-                             <button className="btn btn-outline" style={{width: '100%'}}><RefreshCw size={14}/> Rewrite with AI</button>
+                             <button className="btn btn-outline" style={{width: '100%'}} onClick={() => handleRewrite(draft.id, activeCapTab)}><RefreshCw size={14}/> Rewrite with AI</button>
                           </div>
                         )
                       })}
@@ -638,20 +701,20 @@ function App() {
 
               <div className="card" style={{padding:'1.5rem',marginBottom:'1rem'}}>
                 <h3 style={{fontSize:'1rem',fontWeight:700,marginBottom:'1rem',display:'flex',alignItems:'center',gap:'0.5rem'}}><Globe size={18}/> Connected Accounts</h3>
-                {[
-                  {name:'Instagram',color:'#E1306C',icon:'📸',connected:true},
-                  {name:'X (Twitter)',color:'#1DA1F2',icon:'𝕏',connected:true},
-                  {name:'LinkedIn',color:'#0077B5',icon:'in',connected:false},
-                  {name:'Pinterest',color:'#E60023',icon:'📌',connected:false},
-                  {name:'TikTok',color:'#000000',icon:'🎵',connected:false},
-                  {name:'Threads',color:'#000000',icon:'🧵',connected:false},
+                 {[
+                  {name:'Instagram',id:'instagram',color:'#E1306C',icon:'📸'},
+                  {name:'X (Twitter)',id:'x',color:'#1DA1F2',icon:'𝕏'},
+                  {name:'LinkedIn',id:'linkedin',color:'#0077B5',icon:'in'},
+                  {name:'Pinterest',id:'pinterest',color:'#E60023',icon:'📌'},
+                  {name:'TikTok',id:'tiktok',color:'#000000',icon:'🎵'},
+                  {name:'Threads',id:'threads',color:'#000000',icon:'🧵'},
                 ].map((acc,i)=>(
                   <div key={i} style={{display:'flex',alignItems:'center',justifyContent:'space-between',padding:'0.75rem 0',borderBottom:i<5?'1px solid var(--border)':'none'}}>
                     <div style={{display:'flex',alignItems:'center',gap:'0.75rem'}}>
                       <div style={{width:'36px',height:'36px',borderRadius:'10px',background:acc.color,display:'flex',alignItems:'center',justifyContent:'center',color:'#fff',fontSize:'1rem',fontWeight:700}}>{acc.icon}</div>
-                      <div><div style={{fontWeight:600}}>{acc.name}</div><div style={{fontSize:'0.8rem',color:acc.connected?'var(--success)':'var(--text-secondary)'}}>{acc.connected?'Connected':'Not connected'}</div></div>
+                      <div><div style={{fontWeight:600}}>{acc.name}</div><div style={{fontSize:'0.8rem',color:connectedAccounts[acc.id]?'var(--success)':'var(--text-secondary)'}}>{connectedAccounts[acc.id]?'Connected':'Not connected'}</div></div>
                     </div>
-                    <button className={`btn ${acc.connected?'btn-outline':'btn-primary'}`} style={{padding:'0.4rem 1rem',fontSize:'0.85rem'}} onClick={()=>{triggerHaptic();showToast(acc.connected?`${acc.name} disconnected`:`Redirecting to ${acc.name} login...`);}}>{acc.connected?'Disconnect':'Connect'}</button>
+                    <button className={`btn ${connectedAccounts[acc.id]?'btn-outline':'btn-primary'}`} style={{padding:'0.4rem 1rem',fontSize:'0.85rem'}} onClick={()=>handleConnect(acc.id)}>{connectedAccounts[acc.id]?'Disconnect':'Connect'}</button>
                   </div>
                 ))}
               </div>
